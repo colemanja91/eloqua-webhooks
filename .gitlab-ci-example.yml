@@ -1,0 +1,207 @@
+################################################################################
+# DOCS
+#
+# This is an example Gitlab CI/CD pipeline showing deployment to development
+# and production environments in Openshift Online
+################################################################################
+
+################################################################################
+# General Config
+################################################################################
+
+image: python:3.5
+
+# Stages:
+# test: run code/build/deployment tests, including (but not limited to):
+#   - dry-run of oc config objects
+#   - check config
+#   - run unit tests
+# oc-config: apply specified oc yaml config files to the relevant app environment
+# oc-build: trigger webhook to run new build in relevant app environment
+# oc-deploy: Deploy latest image
+
+stages:
+  - test
+  - oc-config
+  - oc-build
+  - oc-deploy
+
+# Install Openshift command line tools
+before_script:
+  - wget https://github.com/openshift/origin/releases/download/v1.5.1/openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit.tar.gz -nv
+  - tar -zxf openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit.tar.gz
+  - mv ./openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit/oc ./oc
+  - rm openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit.tar.gz
+  - rm -r ./openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit
+
+################################################################################
+# BEGIN scripts for ans-hbspt-elq
+################################################################################
+
+################################################################################
+# STAGE: test
+################################################################################
+
+ans-hbspt-elq-oc-dry-run:
+  stage: test
+  variables:
+    NAMESPACE: ${OPENSHIFT_PROJECT_NAME_DEV}
+    MAX_REPLICAS: "2"
+    MIN_REPLICAS: "1"
+    OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
+  script:
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - ./oc login $OC_URI --token $OC_TOKEN_DEV
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
+    - ./oc apply -f .config/elq-webhook-is.yaml --dry-run
+    - ./oc apply -f .config/elq-webhook-bc.yaml --dry-run
+    - ./oc apply -f .config/elq-webhook-dc.yaml --dry-run
+    - ./oc apply -f .config/elq-webhook-hpa.yaml --dry-run
+    - ./oc apply -f .config/elq-webhook-svc.yaml --dry-run
+    - ./oc apply -f .config/elq-webhook-rt.yaml --dry-run
+  only:
+    - develop
+    - master
+  tags:
+    - docker
+
+ans-hbspt-elq-python-tests:
+  stage: test
+  services:
+    - mongo
+  variables:
+    NAMESPACE: GITLAB_TEST
+    WEBHOOK_USR: admin
+    WEBHOOK_PWD: password
+  script:
+    - pip install -r requirements.txt
+    - bash ./run_tests.sh
+  only:
+    - develop
+    - master
+  tags:
+    - docker
+
+################################################################################
+# STAGE: oc-config
+################################################################################
+
+ans-hbspt-elq-dev-config:
+  stage: oc-config
+  variables:
+    NAMESPACE: ${OPENSHIFT_PROJECT_NAME_DEV}
+    MIN_REPLICAS: "1"
+    MAX_REPLICAS: "2"
+    OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
+  script:
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - ./oc login $OC_URI --token $OC_TOKEN_DEV
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
+    - ./oc apply -f .config/elq-webhook-is.yaml
+    - ./oc apply -f .config/elq-webhook-bc.yaml
+    - ./oc apply -f .config/elq-webhook-dc.yaml
+    - ./oc delete -f .config/elq-webhook-hpa.yaml || true
+    - ./oc create -f .config/elq-webhook-hpa.yaml
+    - ./oc apply -f .config/elq-webhook-svc.yaml
+    - ./oc apply -f .config/elq-webhook-rt.yaml
+  only:
+    - develop
+  environment:
+    name: openshift-online-dev
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_DEV}/overview
+  tags:
+    - docker
+
+ans-hbspt-elq-prod-config:
+  stage: oc-config
+  variables:
+    NAMESPACE: ${OPENSHIFT_PROJECT_NAME_PROD}
+    MIN_REPLICAS: "2"
+    MAX_REPLICAS: "4"
+    OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
+  script:
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - ./oc login $OC_URI --token $OC_TOKEN_PROD
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_PROD}
+    - ./oc apply -f .config/elq-webhook-is.yaml
+    - ./oc apply -f .config/elq-webhook-bc.yaml
+    - ./oc apply -f .config/elq-webhook-dc.yaml
+    - ./oc delete -f .config/elq-webhook-hpa.yaml || true
+    - ./oc create -f .config/elq-webhook-hpa.yaml
+    - ./oc apply -f .config/elq-webhook-svc.yaml
+    - ./oc apply -f .config/elq-webhook-rt.yaml
+  only:
+    - master
+  environment:
+    name: openshift-online-prod
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_PROD}/overview
+  tags:
+    - docker
+
+################################################################################
+# STAGE: oc-build
+################################################################################
+
+ans-hbspt-elq-dev-build:
+  stage: oc-build
+  script:
+    - ./oc login $OC_URI --token $OC_TOKEN_DEV
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
+    - ./oc start-build elq-webhook --from-dir=./ -F
+  only:
+    - develop
+  environment:
+    name: openshift-online-dev
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_DEV}/overview
+  tags:
+    - docker
+
+ans-hbspt-elq-prod-build:
+  stage: oc-build
+  script:
+    - ./oc login $OC_URI --token $OC_TOKEN_PROD
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_PROD}
+    - ./oc start-build elq-webhook --from-dir=./ -F
+  only:
+    - master
+  environment:
+    name: openshift-online-prod
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_PROD}/overview
+  tags:
+    - docker
+
+################################################################################
+# STAGE: oc-deploy
+################################################################################
+
+ans-hbspt-elq-dev-deploy:
+  stage: oc-deploy
+  script:
+    - ./oc login $OC_URI --token $OC_TOKEN_DEV
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
+    - ./oc rollout latest elq-webhook
+  only:
+    - develop
+  environment:
+    name: openshift-online-dev
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_DEV}/overview
+  tags:
+    - docker
+
+ans-hbspt-elq-prod-deploy:
+  stage: oc-deploy
+  script:
+    - ./oc login $OC_URI --token $OC_TOKEN_PROD
+    - ./oc project ${OPENSHIFT_PROJECT_NAME_PROD}
+    - ./oc rollout latest elq-webhook
+  only:
+    - master
+  environment:
+    name: openshift-online-prod
+    url: https://console.pro-us-east-1.openshift.com/console/project/${OPENSHIFT_PROJECT_NAME_PROD}/overview
+  tags:
+    - docker
+
+################################################################################
+# END scripts for ans-hbspt-elq
+################################################################################

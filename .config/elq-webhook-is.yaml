@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    app: elq-webhook
+  name: elq-webhook
+  namespace: ${NAMESPACE}
+spec: {}
+status:
+  dockerImageRepository: 172.30.114.236:5000/${NAMESPACE}/elq-webhook

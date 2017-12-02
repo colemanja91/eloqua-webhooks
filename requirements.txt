@@ -1,0 +1,5 @@
+Flask-RESTful==0.3.6
+flask-restful-swagger-2==0.35
+flask-httpauth==3.2.3
+logmatic-python==0.1.7
+requests==2.18.4

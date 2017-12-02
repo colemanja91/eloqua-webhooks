@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: elq-webhook
+  name: elq-webhook
+  namespace: ${NAMESPACE}
+spec:
+  replicas: ${MIN_REPLICAS}
+  selector:
+    deploymentconfig: elq-webhook
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: elq-webhook
+        deploymentconfig: elq-webhook
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: WEBHOOK_USR
+              valueFrom:
+                secretKeyRef:
+                  key: webhookUsr
+                  name: elq-webhook-secrets
+            - name: WEBHOOK_PWD
+              valueFrom:
+                secretKeyRef:
+                  key: webhookPwd
+                  name: elq-webhook-secrets
+            - name: ELQ_SITE_ID
+              valueFrom:
+                secretKeyRef:
+                  key: elqSiteId
+                  name: elq-webhook-secrets
+            - name: ELQ_HTML_FORM_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: elqHtmlFormName
+                  name: elq-webhook-secrets
+          image: >-
+            172.30.118.67:5000/${NAMESPACE}/elq-webhook:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 60
+          name: elq-webhook
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 60
+          resources:
+            limit:
+              memory: "512Mi"
+              cpu: "1000m"
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers: {}

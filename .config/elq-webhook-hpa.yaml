@@ -1,0 +1,15 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: elq-webhook
+  name: elq-webhook
+  namespace: ${NAMESPACE}
+spec:
+  maxReplicas: ${MAX_REPLICAS}
+  minReplicas: ${MIN_REPLICAS}
+  scaleTargetRef:
+    apiVersion: autoscaling/v1
+    kind: DeploymentConfig
+    name: elq-webhook
+  targetCPUUtilizationPercentage: 320
