@@ -50,15 +50,15 @@ ans-hbspt-elq-oc-dry-run:
     MIN_REPLICAS: "1"
     OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
   script:
-    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config-openshift/elq-webhook-*.yaml
     - ./oc login $OC_URI --token $OC_TOKEN_DEV
     - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
-    - ./oc apply -f .config/elq-webhook-is.yaml --dry-run
-    - ./oc apply -f .config/elq-webhook-bc.yaml --dry-run
-    - ./oc apply -f .config/elq-webhook-dc.yaml --dry-run
-    - ./oc apply -f .config/elq-webhook-hpa.yaml --dry-run
-    - ./oc apply -f .config/elq-webhook-svc.yaml --dry-run
-    - ./oc apply -f .config/elq-webhook-rt.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-is.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-bc.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-dc.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-hpa.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-svc.yaml --dry-run
+    - ./oc apply -f .config-openshift/elq-webhook-rt.yaml --dry-run
   only:
     - develop
     - master
@@ -94,16 +94,16 @@ ans-hbspt-elq-dev-config:
     MAX_REPLICAS: "2"
     OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
   script:
-    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config-openshift/elq-webhook-*.yaml
     - ./oc login $OC_URI --token $OC_TOKEN_DEV
     - ./oc project ${OPENSHIFT_PROJECT_NAME_DEV}
-    - ./oc apply -f .config/elq-webhook-is.yaml
-    - ./oc apply -f .config/elq-webhook-bc.yaml
-    - ./oc apply -f .config/elq-webhook-dc.yaml
-    - ./oc delete -f .config/elq-webhook-hpa.yaml || true
-    - ./oc create -f .config/elq-webhook-hpa.yaml
-    - ./oc apply -f .config/elq-webhook-svc.yaml
-    - ./oc apply -f .config/elq-webhook-rt.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-is.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-bc.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-dc.yaml
+    - ./oc delete -f .config-openshift/elq-webhook-hpa.yaml || true
+    - ./oc create -f .config-openshift/elq-webhook-hpa.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-svc.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-rt.yaml
   only:
     - develop
   environment:
@@ -120,16 +120,16 @@ ans-hbspt-elq-prod-config:
     MAX_REPLICAS: "4"
     OPENSHIFT_ROUTE_HOST: "route.to.openshiftapps.com"
   script:
-    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config/elq-webhook-*.yaml
+    - perl -pi -e 's/\$\{(\w+)\}/$ENV{$1}/g' .config-openshift/elq-webhook-*.yaml
     - ./oc login $OC_URI --token $OC_TOKEN_PROD
     - ./oc project ${OPENSHIFT_PROJECT_NAME_PROD}
-    - ./oc apply -f .config/elq-webhook-is.yaml
-    - ./oc apply -f .config/elq-webhook-bc.yaml
-    - ./oc apply -f .config/elq-webhook-dc.yaml
-    - ./oc delete -f .config/elq-webhook-hpa.yaml || true
-    - ./oc create -f .config/elq-webhook-hpa.yaml
-    - ./oc apply -f .config/elq-webhook-svc.yaml
-    - ./oc apply -f .config/elq-webhook-rt.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-is.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-bc.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-dc.yaml
+    - ./oc delete -f .config-openshift/elq-webhook-hpa.yaml || true
+    - ./oc create -f .config-openshift/elq-webhook-hpa.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-svc.yaml
+    - ./oc apply -f .config-openshift/elq-webhook-rt.yaml
   only:
     - master
   environment:
